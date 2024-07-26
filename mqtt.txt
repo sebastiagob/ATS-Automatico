@@ -1,0 +1,34 @@
+apt update && apt upgrade -y
+apt-get install sudo vim tree wget nmap net-tools htop curl zip unzip ufw nginx python3 perl libnet-ssleay-perl openssl libauthen-pam-perl libpam-runtime libio-pty-perl apt-show-versions mariadb-server mariadb-client mosquitto mosquitto-clients -y
+apt install nodejs npm build-essential -y
+
+echo -e "asd\nasd\n\n\n\n\ny" | adduser sbecerra
+usermod -a -G sudo sbecerra
+echo "sbecerra   ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+timedatectl set-timezone America/Lima
+
+echo "
+y
+n
+y
+y
+y
+y" > sql
+mysql_secure_installation < sql
+
+npm install pm2 -g
+
+apt update
+npm install -g --unsafe-perm node-red
+
+echo "log_dest file /etc/mosquitto/log/mosquitto.log
+include_dir /etc/mosquitto/conf.d
+pid_file /run/mosquitto/mosquitto.pid
+allow_anonymous true
+listener 1883
+persistence true
+persistence_location /var/lib/mosquitto/" > /etc/mosquitto/mosquitto.conf
+
+systemctl restart mosquitto
+nohup node-red > nodered.log 2>&1 &
