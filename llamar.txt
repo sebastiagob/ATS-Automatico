@@ -1,0 +1,66 @@
+import socket
+import time
+import threading
+
+def send_action(sock, action):
+    sock.send(action.encode() + b'\n\n')
+
+def receive_response(sock):
+    response = b''
+    while not b'\n\n' in response:
+        response += sock.recv(8192)
+    return response.decode()
+
+def listen_for_events(sock, event_list):
+    while True:
+        try:
+            response = sock.recv(8192)
+            if response:
+                event_list.append(response.decode())
+        except Exception:
+            break
+
+s = socket.socket()
+s.connect(("localhost", 5038))
+
+send_action(s, "Action: Login\nUsername: diego\nSecret: abc123456")
+
+event_list = []
+
+event_thread = threading.Thread(target=listen_for_events, args=(s, event_list))
+event_thread.daemon = True
+event_thread.start()
+
+time.sleep(1)
+
+if any("Message: Authentication accepted" in event for event in event_list):
+    print("Autenticación exitosa")
+else:
+    print("Error de autenticación")
+
+originate_command = (
+    "Action: Originate\n"
+    "Channel: PJSIP/102\n"
+    "Context: internas\n"
+    "Exten: 101\n"
+    "Priority: 1\n"
+    "CallerID: Motor_No_Enciende\n"
+    "Timeout: 30000\n"
+)
+send_action(s, originate_command)
+
+time.sleep(31)
+
+call_made = False
+for event in event_list:
+    if "Device: PJSIP/102" in event and "State: RINGING" in event:
+        call_made = True
+        break
+
+if call_made:
+    print("Llamada realizada")
+else:
+    print("Llamada no realizada")
+
+send_action(s, "Action: Logoff")
+s.close()
